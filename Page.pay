@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment and Verification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f5f5f5;
+            margin: 0;
+        }
+
+        .container {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            text-align: center;
+            opacity: 0; /* Start hidden */
+            transform: translateY(20px); /* Start off position */
+            animation: fadeInUp 0.6s forwards; /* Animation to fade in and slide up */
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        p {
+            margin-bottom: 15px;
+        }
+
+        button {
+            padding: 10px;
+            background-color: #ff69b4; /* Pink color */
+            border: none;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease; /* Smooth color transition */
+        }
+
+        button:hover {
+            background-color: #ff1493; /* Darker pink color */
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            margin-top: 20px;
+        }
+
+        label {
+            margin-bottom: 5px;
+        }
+
+        input {
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            transition: border-color 0.3s ease; /* Smooth border color transition */
+        }
+
+        input:focus {
+            border-color: #ff69b4; /* Pink border on focus */
+            outline: none; /* Remove default focus outline */
+        }
+
+        #response {
+            margin-top: 15px;
+            font-size: 16px;
+            opacity: 0; /* Start hidden */
+            animation: fadeIn 1s forwards; /* Animation to fade in response text */
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        #logo-link {
+            display: block;
+            margin-bottom: 20px;
+            animation: bounce 1s infinite; /* Animation to bounce logo */
+        }
+
+        #bkash-logo {
+            width: 100px; /* Smaller size for the logo */
+            height: auto; /* Maintain aspect ratio */
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-10px);
+            }
+            60% {
+                transform: translateY(-5px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="payment-container">
+        <a href="https://www.bkash.com" target="_blank" id="logo-link">
+            <img src="https://i.postimg.cc/kGvs7Ym4/1701670452bkash-png.png" alt="bKash Logo" id="bkash-logo">
+        </a>
+        <h1>Send Your Payment</h1>
+        <p>Send your money by bKash to the number:</p>
+        <p><strong>01736382727</strong></p>
+        <p>Then click the "DONE" button below.</p>
+        <button id="done-button">DONE ✅</button>
+    </div>
+
+    <div class="container" id="verification-container" style="display: none;">
+        <h1>Verify Payment</h1>
+        <form id="verification-form">
+            <label for="phone">bKash Number:</label>
+            <input type="text" id="phone" name="phone" placeholder="Enter bKash number" required>
+            
+            <label for="amount">Amount (BDT):</label>
+            <input type="number" id="amount" name="amount" placeholder="Enter amount" required>
+            
+            <label for="transaction-id">Transaction ID:</label>
+            <input type="text" id="transaction-id" name="transaction-id" placeholder="Enter transaction ID" required>
+            
+            <label for="telegram">Your Telegram Username:</label>
+            <input type="text" id="telegram" name="telegram" placeholder="Enter your Telegram username" required>
+            
+            <button type="submit" id="verify-button">VERIFY 🌀</button>
+        </form>
+        <div id="response"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const doneButton = document.getElementById('done-button');
+            const verificationForm = document.getElementById('verification-form');
+            const paymentContainer = document.getElementById('payment-container');
+            const verificationContainer = document.getElementById('verification-container');
+            const verifyButton = document.getElementById('verify-button');
+            const responseDiv = document.getElementById('response');
+
+            // Your Telegram Bot Token and Chat ID
+            const botToken = '7313213346:AAGTqsQCOxJVKVtypgTt3iRnDsC8cKSU0i0'; // Replace with your bot token
+            const chatId = '6821582024'; // Replace with your chat ID
+
+            // Function to handle form submission
+            verificationForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+
+                // Check if an hour has passed since the last verification attempt
+                const lastAttemptTime = localStorage.getItem('lastVerificationTime');
+                const currentTime = new Date().getTime();
+                const oneHour = 60 * 60 * 1000; // 1 hour in milliseconds
+
+                if (lastAttemptTime && (currentTime - lastAttemptTime < oneHour)) {
+                    const remainingTime = ((oneHour - (currentTime - lastAttemptTime)) / 1000).toFixed(0);
+                    responseDiv.innerHTML = `
+                        <p>You can only verify once every hour. Please wait ${remainingTime} seconds before trying again.</p>
+                    `;
+                    responseDiv.style.opacity = '1'; // Fade in response text
+                    return;
+                }
+
+                // Retrieve user input
+                const phone = document.getElementById('phone').value;
+                const amount = document.getElementById('amount').value;
+                const transactionId = document.getElementById('transaction-id').value;
+                const telegram = document.getElementById('telegram').value;
+
+                // Create message to send to Telegram
+                const message = `
+                    New Payment Verification Request:
+                    - bKash Number: ${phone}
+                    - Amount (BDT): ${amount}
+                    - Transaction ID: ${transactionId}
+                    - Telegram Username: ${telegram}
+                `;
+
+                // Send data to Telegram bot
+                sendMessageToTelegram(message);
+
+                // Store the current time as the last verification attempt time
+                localStorage.setItem('lastVerificationTime', currentTime);
+
+                // Simulate verification process
+                setTimeout(() => {
+                    responseDiv.innerHTML = `
+                        <p>It’s under verification. This can take a few minutes to hours, so please wait. You will receive a redemption code on Telegram once verification is complete.</p>
+                    `;
+                    responseDiv.style.opacity = '1'; // Fade in response text
+                }, 1000); // Simulates a delay for processing
+            });
+
+            function sendMessageToTelegram(message) {
+                const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+                const payload = {
+                    chat_id: chatId,
+                    text: message
+                };
+
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.ok) {
+                        console.error('Error sending message:', data);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            }
+
+            doneButton.addEventListener('click', function() {
+                // Hide payment container and show verification container with animation
+                paymentContainer.style.opacity = '0';
+                paymentContainer.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    paymentContainer.style.display = 'none';
+                    verificationContainer.style.display = 'block';
+                    verificationContainer.style.opacity = '0';
+                    verificationContainer.style.transform = 'translateY(20px)';
+                    verificationContainer.style.animation = 'fadeInUp 0.6s forwards';
+                }, 600); // Match animation duration
+            });
+        });
+    </script>
+</body>
+</html>
